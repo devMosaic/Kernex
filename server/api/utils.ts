@@ -1,4 +1,5 @@
-import { FastifyInstance } from 'fastify';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { FastifyInstance } from 'fastify';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 
@@ -13,14 +14,14 @@ export default async function (fastify: FastifyInstance) {
       try {
         const hash = await bcrypt.hash(text, saltRounds);
         return { hash };
-      } catch (e) {
+      } catch {
         return reply.status(500).send({ error: 'Bcrypt hashing failed' });
       }
     } else {
       try {
         const hash = crypto.createHash(algorithm).update(text).digest('hex');
         return { hash };
-      } catch (e) {
+      } catch {
         return reply.status(400).send({ error: `Invalid or unsupported algorithm: ${algorithm}` });
       }
     }
@@ -38,7 +39,7 @@ export default async function (fastify: FastifyInstance) {
         const result = Buffer.from(text, 'base64').toString('utf-8');
         return { result };
       }
-    } catch (e) {
+    } catch {
       return reply.status(400).send({ error: 'Base64 operation failed' });
     }
   });
@@ -56,7 +57,7 @@ export default async function (fastify: FastifyInstance) {
       const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
       
       return { header, payload };
-    } catch (e) {
+    } catch {
       return reply.status(400).send({ error: 'Failed to decode JWT' });
     }
   });
@@ -106,7 +107,7 @@ export default async function (fastify: FastifyInstance) {
     try {
       const hmac = crypto.createHmac(algorithm, secret).update(text).digest(outputFormat as any);
       return { hmac };
-    } catch (e) {
+    } catch {
       return reply.status(400).send({ error: 'HMAC generation failed' });
     }
   });

@@ -11,6 +11,7 @@
     <a href="#-what-is-kernex">About</a> •
     <a href="#-features">Features</a> •
     <a href="#-installation">Installation</a> •
+    <a href="docs/DEPLOYMENT.md">Deployment</a> •
     <a href="docs/PLUGINS.md">Plugin Guide</a> •
     <a href="CONTRIBUTING.md">Contributing</a>
   </p>
@@ -31,6 +32,16 @@ Unlike a traditional desktop OS where windows overlap and hide each other, Kerne
 *   **Persistence:** Your "desktop" state is saved on the server. Reload the browser, and everything is exactly where you left it.
 *   **Ownership:** No cloud accounts. No tracking. You own the data.
 
+## 📸 Gallery
+
+<p align="center">
+  <img src="public/assets/home.png" width="45%" alt="Home Dashboard">
+  <img src="public/assets/workspace.png" width="45%" alt="Infinite Canvas Workspace">
+</p>
+<p align="center">
+  <img src="public/assets/settings.png" width="80%" alt="Settings Panel">
+</p>
+
 ---
 
 ## 🛠 Features
@@ -39,13 +50,17 @@ Unlike a traditional desktop OS where windows overlap and hide each other, Kerne
 *   **🧱 Persistent Nodes:** Tools run as isolated instances that save their state.
 *   **🔌 Plugin Architecture:** Extensible via simple HTML/React plugins.
 *   **📂 File Manager:** Browse and manage your server's real filesystem.
-*   **💻 Terminal:** Full xterm.js shell access to the host.
+*   **💻 Terminal:** Full xterm.js shell access to the host (Secure & Persistent).
 *   **🧪 Developer Tools:**
     *   **HTTP Tester:** Postman-lite for API testing.
     *   **JSON/YAML/XML Tools:** Formatters and validators.
-    *   **Diff Viewer:** Compare text.
+    *   **Diff Viewer:** Compare text with syntax highlighting.
     *   **Crypto Tools:** Hashing, Base64, HMAC.
-*   **🔒 Security:** Password authentication, encrypted secrets storage.
+*   **🔒 Security:** 
+    *   Strong Session Management (1h expiry).
+    *   Encrypted Secrets Storage (AES-256-GCM).
+    *   Secure Path Traversal Protection.
+    *   Rate-limited WebSockets.
 
 ---
 
@@ -68,22 +83,46 @@ Unlike a traditional desktop OS where windows overlap and hide each other, Kerne
     npm install
     ```
 
-  3.  **Start the system:**
-      
-      Open two terminal tabs:
+3.  **Start the system:**
+    
+    Open two terminal tabs:
 
-      ```bash
-      # Terminal 1: Start the Backend
-      npm run server
-      ```
+    ```bash
+    # Terminal 1: Start the Backend (Port 3000)
+    npm run server
+    ```
 
-      ```bash
-      # Terminal 2: Start the Frontend
-      npm run dev
-      ```
+    ```bash
+    # Terminal 2: Start the Frontend (Port 5173)
+    npm run dev
+    ```
 
-  4.  **Access the workspace:**
-      Open `http://localhost:5173` in your browser.
+4.  **Access the workspace:**
+    Open `http://localhost:5173` in your browser.
+    
+    *First run will prompt you to set up an admin account.*
+
+---
+
+## 🔒 Security & Deployment
+
+Kernex is designed to be self-hosted. For production deployment, ensure you:
+
+1.  **MANDATORY**: Set `KERNEX_ENCRYPTION_KEY` environment variable (64-character hex string) for secret encryption. The server will **fail to start** in production if this is missing.
+2.  Run behind a reverse proxy (Nginx/Caddy) with HTTPS.
+3.  Do **not** run as root user.
+
+See [Deployment Guide](docs/DEPLOYMENT.md) for details.
+
+## 📦 Build & Development
+
+The project now includes strict type-checking for both client and server code.
+
+```bash
+# Run full project type check and build
+npm run build
+```
+
 ---
 
 ## 📖 Documentation

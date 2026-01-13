@@ -1,8 +1,9 @@
-import { FastifyInstance } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import db from '../db.js';
+import { encryptSecret } from '../crypto.js';
 
 export default async function (fastify: FastifyInstance) {
-  fastify.get('/', async (_request, reply) => {
+  fastify.get('/', async (_request, _reply) => {
     try {
       const rows = db.prepare('SELECT key FROM secrets').all() as { key: string }[];
       return rows.map(r => ({ key: r.key }));
@@ -15,7 +16,8 @@ export default async function (fastify: FastifyInstance) {
   fastify.post('/', async (request, reply) => {
     try {
       const { key, value } = request.body as { key: string, value: string };
-      db.prepare('INSERT OR REPLACE INTO secrets (key, value) VALUES (?, ?)').run(key, value);
+      const encryptedValue = encryptSecret(value);
+      db.prepare('INSERT OR REPLACE INTO secrets (key, value) VALUES (?, ?)').run(key, encryptedValue);
       return { success: true };
     } catch (e) {
       console.error('DB Error saving secret:', e);

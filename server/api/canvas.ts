@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import fs from 'fs/promises';
 import path from 'path';
 import { atomicWriteFile } from '../utils/fileOps.js';
@@ -30,7 +30,7 @@ const writeCanvas = async (state: any) => {
 
 export default async function (fastify: FastifyInstance) {
   // GET /api/canvas?workspaceId=xxx
-  fastify.get('/', async (request, reply) => {
+  fastify.get('/', async (request, _reply) => {
     const { workspaceId } = request.query as any;
     const allStates = await readCanvas() || {};
     // Return empty state if not found
@@ -43,7 +43,7 @@ export default async function (fastify: FastifyInstance) {
   });
 
   // POST /api/canvas
-  fastify.post('/', async (request, reply) => {
+  fastify.post('/', async (request, _reply) => {
     const { workspaceId, viewport, nodes } = request.body as any;
     const allStates = await readCanvas() || {};
     const id = workspaceId || 'default';

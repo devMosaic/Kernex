@@ -149,7 +149,7 @@ const DataApp: React.FC<DataAppProps> = ({ tool }) => {
         );
       case 'markdown':
         return <div className="markdown-preview" dangerouslySetInnerHTML={{ __html: result.html }} />;
-      case 'csv':
+      case 'csv': {
         if (!result.records?.length) return <div className="empty-state">No records found</div>;
         const headers = Object.keys(result.records[0]);
         return (
@@ -164,7 +164,8 @@ const DataApp: React.FC<DataAppProps> = ({ tool }) => {
             </table>
           </div>
         );
-      case 'logs-viewer':
+      }
+      case 'logs-viewer': {
         const filtered = result.logs.filter((l: any) => filterLevel === 'ALL' || l.level === filterLevel);
         return (
           <div className="logs-list">
@@ -176,6 +177,7 @@ const DataApp: React.FC<DataAppProps> = ({ tool }) => {
             ))}
           </div>
         );
+      }
       case 'regex':
         return (
           <div className="regex-results">
@@ -385,11 +387,10 @@ const DataApp: React.FC<DataAppProps> = ({ tool }) => {
         td { padding: 10px; border-bottom: 1px solid #2a2a2a; font-size: 12px; }
         
         .log-line { font-family: 'JetBrains Mono', monospace; padding: 6px 15px; border-bottom: 1px solid #252526; display: flex; gap: 15px; font-size: 12px; }
-        .log-level { font-weight: 800; min-width: 60px; font-size: 10px; }
-        .level-error { background-color: rgba(239, 68, 68, 0.05); }
-        .level-error .log-level { color: #ef4444; }
-        .level-warn .log-level { color: #f59e0b; }
-        .level-info .log-level { color: #3d5afe; }
+        .diff-view { font-family: 'JetBrains Mono', monospace; padding: 15px; font-size: 13px; line-height: 1.5; }
+        .diff-line { white-space: pre-wrap; word-break: break-all; }
+        .diff-line.added { background-color: rgba(16, 185, 129, 0.15); color: #34d399; }
+        .diff-line.removed { background-color: rgba(239, 68, 68, 0.15); color: #f87171; text-decoration: line-through; opacity: 0.8; }
         
         .empty-state { display: flex; align-items: center; justify-content: center; height: 100%; color: #444; font-size: 12px; font-style: italic; }
         .error-display { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: #ef4444; gap: 10px; }

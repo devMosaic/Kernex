@@ -1,0 +1,28 @@
+0.1.2:
+  fixed:
+    - CRITICAL: Enforced KERNEX_ENCRYPTION_KEY requirement in production environment
+    - Security: Redacted sensitive authentication tokens from terminal connection logs
+    - Build: Added TypeScript type checking for server-side code
+0.1.1:
+  added:
+    - Documentation system at /docs with markdown rendering
+    - Workspace settings page for easier configuration
+    - Live Server Logs viewer (xterm.js based)
+    - Auto-save toggle in Notes app
+    - Diff tool output with color-coded syntax highlighting
+    - Unified Sidebar UI across all pages
+  fixed:
+    - Improved server logging format
+    - Backend route strictness (only /api prefixes)
+    - Various linting errors in server utilities
+
+0.1.0:
+  added:
+    - Multi-workspace architecture with file system isolation
+    - Integrated Terminal with workspace-aware context (cwd)
+    - Plugin system with iframe isolation
+    - Workspace Selector UI with card layout
+    - Core plugins: File Manager, Notes, HTTP Tester, various data utilities (JSON, JWT, etc.)
+    - Auth system with session management
+  fixed:
+    - Initial release stability fixes

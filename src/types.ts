@@ -16,3 +16,14 @@ export interface NodeData {
   locked?: boolean;
   selected?: boolean;
 }
+
+export interface Workspace {
+  id: string;
+  name: string;
+  path: string;
+  description?: string;
+  icon?: string;
+  lastOpened?: number;
+  created?: number;
+  isProtected?: boolean;
+}

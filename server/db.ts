@@ -10,7 +10,7 @@ if (!fs.existsSync(DATA_DIR)) {
 }
 
 const dbPath = path.join(DATA_DIR, 'system.db');
-const db = new Database(dbPath);
+const db: any = new Database(dbPath);
 
 // Initialize Tables
 db.exec(`
@@ -54,11 +54,43 @@ db.exec(`
     user_id INTEGER NOT NULL,
     created_at INTEGER NOT NULL,
     last_used_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY(user_id) REFERENCES auth_user(id)
   );
 
+  CREATE TABLE IF NOT EXISTS logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp INTEGER NOT NULL,
+    level TEXT NOT NULL,
+    message TEXT NOT NULL,
+    category TEXT,
+    user TEXT,
+    metadata TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS ftp_accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    root_dir TEXT NOT NULL DEFAULT '/',
+    readonly BOOLEAN DEFAULT 0,
+    created_at INTEGER,
+    updated_at INTEGER
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs(timestamp);
   CREATE INDEX IF NOT EXISTS idx_notes_workspace ON notes(workspace_id);
 `);
+
+// Migration: Add expires_at if missing
+try {
+    const columns = db.prepare("PRAGMA table_info(auth_session)").all() as any[];
+    if (!columns.some(c => c.name === 'expires_at')) {
+        db.prepare("ALTER TABLE auth_session ADD COLUMN expires_at INTEGER NOT NULL DEFAULT 0").run();
+    }
+} catch (e) {
+    console.error('Migration failed:', e);
+}
 
 // Helper to get typed setting
 export const getSetting = <T>(key: string, defaultValue: T): T => {

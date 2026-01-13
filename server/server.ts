@@ -1,11 +1,16 @@
-import Fastify from 'fastify';
+import Fastify, { type FastifyInstance } from 'fastify';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'fs';
 import fastifyWebsocket from '@fastify/websocket';
 import fastifyCors from '@fastify/cors';
 import fastifyCookie from '@fastify/cookie';
+import fastifyStatic from '@fastify/static';
 import iframeRoutes from './iframeRoutes.js'; 
+import { logEmitter } from './logEmitter.js';
+import pretty from 'pino-pretty';
+import multipart from '@fastify/multipart';
 
+// API Imports
 import httpTesterRoutes from './api/httpTester.js';
 import notesRoutes from './api/notes.js';
 import canvasRoutes from './api/canvas.js';
@@ -21,35 +26,76 @@ import dbManagerRoutes from './api/dbManager.js';
 import shortUrlRoutes from './api/shortUrls.js';
 import utilsRoutes from './api/utils.js';
 import dataUtilsRoutes from './api/dataUtils.js';
+import workspaceRoutes from './api/workspaces.js';
+import logsRoutes from './api/logs.js';
+import docsRoutes from './api/docs.js';
 import authRoutes, { initAuth, authenticate } from './api/auth.js';
+import ftpRoutes from './api/ftp.js';
+import ftpClientRoutes from './api/ftpClient.js';
+import { ftpManager } from './ftpServer.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Create custom logger stream
+const prettyStream = pretty({
+  translateTime: 'SYS:standard',
+  ignore: 'pid,hostname,reqId',
+  colorize: true
+});
+
+const originalWrite = prettyStream.write.bind(prettyStream);
+prettyStream.write = (chunk: any) => {
+    logEmitter.emit('log', chunk.toString());
+    return originalWrite(chunk);
+};
 
 const fastify = Fastify({
-  logger: true
+  logger: {
+      level: 'info',
+      stream: prettyStream
+  },
+  disableRequestLogging: true 
+});
+
+// Custom request logging
+fastify.addHook('onRequest', (req, _reply, done) => {
+    if (!req.url.startsWith('/api/term/ws') && !req.url.startsWith('/api/logs/ws')) {
+        req.log.info(`${req.method} ${req.url}`);
+    }
+    done();
 });
 
 // Register plugins
+const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : true;
+
 fastify.register(fastifyCors, {
-  origin: true,
-  credentials: true
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-auth-session', 'x-workspace-id'],
 });
+
 fastify.register(fastifyCookie);
 fastify.register(fastifyWebsocket);
+fastify.register(multipart);
 
-// Register iframe routes
+// Register iframe routes (Plugins)
 fastify.register(iframeRoutes);
 
 // Register AUTH routes (Unprotected)
 fastify.register(authRoutes, { prefix: '/api/auth' });
 
-// Register TERMINAL routes separately (Auth handled internally via token query param)
+// Register TERMINAL routes separately
 fastify.register(terminalRoutes, { prefix: '/api/term' });
 
+// Register LOGS routes separately
+fastify.register(logsRoutes, { prefix: '/api/logs' });
+
+// Register DOCS routes
+fastify.register(docsRoutes, { prefix: '/api/docs' });
+
 // Register API routes (Protected)
-const registerProtected = async (instance: any) => {
+const registerProtected = async (instance: FastifyInstance) => {
   instance.addHook('preHandler', authenticate);
+  
   instance.register(httpTesterRoutes, { prefix: '/http' });
   instance.register(notesRoutes, { prefix: '/notes' });
   instance.register(canvasRoutes, { prefix: '/canvas' });
@@ -63,6 +109,9 @@ const registerProtected = async (instance: any) => {
   instance.register(dbManagerRoutes, { prefix: '/db' });
   instance.register(utilsRoutes, { prefix: '/utils' });
   instance.register(dataUtilsRoutes, { prefix: '/data' });
+  instance.register(workspaceRoutes, { prefix: '/workspaces' });
+  instance.register(ftpRoutes, { prefix: '/ftp' });
+  instance.register(ftpClientRoutes, { prefix: '/ftp-client' });
 };
 
 fastify.register(registerProtected, { prefix: '/api' });
@@ -71,15 +120,37 @@ fastify.register(registerProtected, { prefix: '/api' });
 fastify.register(shortUrlRoutes); 
 
 // Health check
-fastify.get('/health', async (request, reply) => {
+fastify.get('/health', async () => {
   return { status: 'ok' };
 });
 
+// Serve Static Frontend (Production Only)
+const distPath = path.join(process.cwd(), 'dist');
+if (fs.existsSync(distPath)) {
+  console.log('Serving static files from:', distPath);
+  
+  fastify.register(fastifyStatic, {
+    root: distPath,
+    prefix: '/',
+    decorateReply: false
+  });
+
+  // SPA Fallback
+  fastify.setNotFoundHandler((request, reply) => {
+    if (request.raw.url && request.raw.url.startsWith('/api')) {
+      reply.status(404).send({ error: 'Endpoint not found' });
+    } else {
+      reply.sendFile('index.html');
+    }
+  });
+}
+
 const start = async () => {
   try {
-    // Initialize Auth from ENV if needed
     await initAuth();
-
+    // Start FTP Server
+    await ftpManager.start();
+    
     await fastify.listen({ port: 3000, host: '0.0.0.0' });
     console.log('Server listening on http://localhost:3000');
   } catch (err) {

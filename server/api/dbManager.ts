@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import db from '../db.js';
 import path from 'path';
 import fs from 'fs';
@@ -11,7 +11,7 @@ export default async function (fastify: FastifyInstance) {
   });
 
   // Database Info
-  fastify.get('/info', async (request, reply) => {
+  fastify.get('/info', async (_request, reply) => {
     try {
       const dbPath = path.join(process.cwd(), 'data', 'system.db');
       const stats = fs.statSync(dbPath);
@@ -31,7 +31,7 @@ export default async function (fastify: FastifyInstance) {
   });
 
   // List Tables
-  fastify.get('/tables', async (request, reply) => {
+  fastify.get('/tables', async (_request, reply) => {
     try {
       const tables = db.prepare(`
         SELECT name FROM sqlite_master 

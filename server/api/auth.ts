@@ -1,7 +1,8 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import db from '../db.js';
+import { logActivity } from '../dbLogger.js';
 
 const SESSION_HEADER = 'x-auth-session';
 const COOKIE_NAME = 'session';
@@ -23,6 +24,8 @@ export const initAuth = async () => {
       const hash = await hashPassword(envPassword);
       db.prepare('INSERT INTO auth_user (username, password_hash, created_at) VALUES (?, ?, ?)')
         .run(envUsername, hash, Date.now());
+      
+      logActivity('info', 'System initialized from environment variables', 'auth', 'system');
     }
   }
 };
@@ -42,14 +45,15 @@ export const authenticate = async (request: FastifyRequest, reply: FastifyReply)
     return reply.status(401).send({ error: 'Unauthorized: Missing session' });
   }
 
-  const session = db.prepare('SELECT * FROM auth_session WHERE id = ?').get(sessionId) as any;
+  const session = db.prepare('SELECT * FROM auth_session WHERE id = ? AND expires_at > ?').get(sessionId, Date.now()) as any;
 
   if (!session) {
-    return reply.status(401).send({ error: 'Unauthorized: Invalid session' });
+    return reply.status(401).send({ error: 'Unauthorized: Invalid or expired session' });
   }
 
-  // Update last used
-  db.prepare('UPDATE auth_session SET last_used_at = ? WHERE id = ?').run(Date.now(), sessionId);
+  // Update last used and extend expiration (sliding window - 1 hour)
+  const newExpiry = Date.now() + (60 * 60 * 1000);
+  db.prepare('UPDATE auth_session SET last_used_at = ?, expires_at = ? WHERE id = ?').run(Date.now(), newExpiry, sessionId);
   
   // Attach user context
   (request as any).user = { id: session.user_id };
@@ -58,14 +62,14 @@ export const authenticate = async (request: FastifyRequest, reply: FastifyReply)
 export default async function (fastify: FastifyInstance) {
   
   // GET /api/auth/status - Check if setup is needed or if authenticated
-  fastify.get('/status', async (request, reply) => {
+  fastify.get('/status', async (request, _reply) => {
     const userCount = db.prepare('SELECT COUNT(*) as count FROM auth_user').get() as { count: number };
     const setupRequired = userCount.count === 0;
 
     const sessionId = request.headers[SESSION_HEADER] as string || request.cookies[COOKIE_NAME];
     let isAuthenticated = false;
     if (sessionId) {
-      const session = db.prepare('SELECT id FROM auth_session WHERE id = ?').get(sessionId);
+      const session = db.prepare('SELECT id FROM auth_session WHERE id = ? AND expires_at > ?').get(sessionId, Date.now());
       isAuthenticated = !!session;
     }
 
@@ -91,17 +95,20 @@ export default async function (fastify: FastifyInstance) {
     const userId = result.lastInsertRowid;
     const sessionId = uuidv4();
     const now = Date.now();
+    const expiresAt = now + (60 * 60 * 1000); // 1 hour
 
-    db.prepare('INSERT INTO auth_session (id, user_id, created_at, last_used_at) VALUES (?, ?, ?, ?)')
-      .run(sessionId, userId, now, now);
+    db.prepare('INSERT INTO auth_session (id, user_id, created_at, last_used_at, expires_at) VALUES (?, ?, ?, ?, ?)')
+      .run(sessionId, userId, now, now, expiresAt);
 
     reply.setCookie(COOKIE_NAME, sessionId, {
       path: '/',
       httpOnly: true,
-      sameSite: 'none',
-      secure: true, // Required for sameSite: 'none'
-      maxAge: 60 * 60 * 24 * 30
+      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production', 
+      maxAge: 3600 // 1 hour
     });
+
+    logActivity('info', `Initial setup completed for user: ${username}`, 'auth', username);
 
     return { sessionId, message: 'Setup successful' };
   });
@@ -110,46 +117,32 @@ export default async function (fastify: FastifyInstance) {
   fastify.post('/login', async (request, reply) => {
     const { username, password } = request.body as any;
     
-    // Check for Environment Override first
-    const overridePass = process.env.KERNEX_ROOT_OVERRIDE;
-    let isAuthorized = false;
-    let user = db.prepare('SELECT * FROM auth_user WHERE username = ?').get(username) as any;
+    const user = db.prepare('SELECT * FROM auth_user WHERE username = ?').get(username) as any;
 
-    if (overridePass && password === overridePass) {
-        // If override is set and matches, authorize immediately
-        // If user doesn't exist in DB (unlikely if setup was done), we might need to handle it, 
-        // but usually we just authorize the root session.
-        isAuthorized = true;
-        if (!user) {
-            // Create user if it doesn't exist but override is used
-            const hash = await hashPassword(password);
-            const result = db.prepare('INSERT INTO auth_user (username, password_hash, created_at) VALUES (?, ?, ?)')
-                .run(username || 'root', hash, Date.now());
-            user = { id: result.lastInsertRowid };
-        }
-    } else if (user && (await bcrypt.compare(password, user.password_hash))) {
-        isAuthorized = true;
-    }
-
-    if (!isAuthorized) {
+    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+      logActivity('warn', `Failed login attempt for user: ${username}`, 'auth', 'system');
       return reply.status(401).send({ error: 'Invalid username or password' });
     }
 
-    // Single session policy: delete all existing sessions
-    db.prepare('DELETE FROM auth_session').run();
+    // Single-device policy: Invalidate all existing sessions for this user
+    db.prepare('DELETE FROM auth_session WHERE user_id = ?').run(user.id);
 
     const sessionId = uuidv4();
     const now = Date.now();
-    db.prepare('INSERT INTO auth_session (id, user_id, created_at, last_used_at) VALUES (?, ?, ?, ?)')
-      .run(sessionId, user.id, now, now);
+    const expiresAt = now + (60 * 60 * 1000); // 1 hour
+
+    db.prepare('INSERT INTO auth_session (id, user_id, created_at, last_used_at, expires_at) VALUES (?, ?, ?, ?, ?)')
+      .run(sessionId, user.id, now, now, expiresAt);
 
     reply.setCookie(COOKIE_NAME, sessionId, {
       path: '/',
       httpOnly: true,
-      sameSite: 'none',
-      secure: true,
-      maxAge: 60 * 60 * 24 * 30
+      sameSite: 'strict',
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 3600 // 1 hour
     });
+
+    logActivity('info', `User logged in: ${username}`, 'auth', username);
 
     return { sessionId };
   });
@@ -170,6 +163,8 @@ export default async function (fastify: FastifyInstance) {
       const hash = await hashPassword(newPassword);
       db.prepare('UPDATE auth_user SET password_hash = ? WHERE id = ?').run(hash, userContext.id);
 
+      logActivity('info', 'Password changed successfully', 'auth', 'user');
+
       return { success: true, message: 'Password updated successfully' };
   });
 
@@ -184,6 +179,8 @@ export default async function (fastify: FastifyInstance) {
       sameSite: 'none',
       secure: true
     });
+    
+    logActivity('info', 'User logged out', 'auth', 'user');
     return { success: true };
   });
 }

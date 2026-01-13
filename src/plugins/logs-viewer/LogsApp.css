@@ -1,0 +1,40 @@
+.logs-container {
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: #0f0f0f;
+    color: #e0e0e0;
+}
+
+.logs-header {
+    height: 40px;
+    background-color: #1a1a1a;
+    border-bottom: 1px solid #333;
+    display: flex;
+    align-items: center;
+    padding: 0 15px;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #666;
+}
+
+.status-dot.connected { background-color: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
+.status-dot.disconnected { background-color: #ef4444; }
+
+.terminal-wrapper {
+    flex: 1;
+    overflow: hidden;
+    padding: 10px;
+}

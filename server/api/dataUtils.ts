@@ -1,4 +1,5 @@
-import { FastifyInstance } from 'fastify';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { FastifyInstance } from 'fastify';
 import yaml from 'js-yaml';
 import { parse as parseCsv } from 'csv-parse/sync';
 import * as diff from 'diff';

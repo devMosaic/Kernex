@@ -29,6 +29,7 @@ const NotesApp: React.FC<NotesAppProps> = ({ initialState, onStateChange }) => {
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'error'>('saved');
   const [isLoading, setIsLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(initialState?.isFullscreen || false);
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(true);
   
   const workspaceId = 'default';
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -119,10 +120,15 @@ const NotesApp: React.FC<NotesAppProps> = ({ initialState, onStateChange }) => {
   }, []);
 
   const triggerAutoSave = useCallback((note: Note) => {
+    if (!autoSaveEnabled) {
+        // Show unsaved status if auto-save is off
+        setSaveStatus('error'); // Reusing error style for now to indicate unsaved/dirty
+        return;
+    }
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     setSaveStatus('saving');
     saveTimeoutRef.current = setTimeout(() => performSave(note), 800);
-  }, [performSave]);
+  }, [performSave, autoSaveEnabled]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!activeNote) return;
@@ -264,10 +270,18 @@ const NotesApp: React.FC<NotesAppProps> = ({ initialState, onStateChange }) => {
                 onBlur={() => performSave(activeNote)}
               />
               <div className="editor-actions">
+                <button 
+                    className={`icon-btn ${autoSaveEnabled ? 'active' : ''}`} 
+                    onClick={() => setAutoSaveEnabled(!autoSaveEnabled)} 
+                    title={autoSaveEnabled ? "Auto Save On" : "Auto Save Off"}
+                    style={{ fontSize: '10px', width: 'auto', padding: '0 8px', color: autoSaveEnabled ? 'var(--accent-primary)' : 'var(--text-secondary)' }}
+                >
+                    {autoSaveEnabled ? 'Auto Save' : 'Manual Save'}
+                </button>
                 <div className={`save-indicator ${saveStatus}`}>
                   {saveStatus === 'saving' && <><Loader2 size={12} className="spin" /> Saving...</>}
                   {saveStatus === 'saved' && <><Check size={12} /> Saved</>}
-                  {saveStatus === 'error' && <>Error saving</>}
+                  {saveStatus === 'error' && <>Unsaved</>}
                 </div>
                 <button className="icon-btn" onClick={toggleFullscreen} title="Toggle Fullscreen">
                   {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
@@ -283,7 +297,7 @@ const NotesApp: React.FC<NotesAppProps> = ({ initialState, onStateChange }) => {
               value={activeNote.content}
               onChange={handleContentChange}
               onScroll={handleScroll}
-              onBlur={() => performSave(activeNote)}
+              onBlur={() => autoSaveEnabled && performSave(activeNote)}
               placeholder="Start writing..."
               spellCheck={false}
             />

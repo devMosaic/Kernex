@@ -2,13 +2,174 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- <link rel="icon" type="image/x-icon" href="/favicon.ico" /> -->
-    <link rel="icon" type="image/png" href="/Kernex.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- SEO & Metadata -->
     <title>Kernex</title>
+    <meta name="description" content="Kernex — a self-hosted programmable workspace runtime." />
+    <meta name="theme-color" content="#09090b" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/Kernex.png" />
+
+    <!-- Fonts: Inter for that clean, modern dev-tool look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+
+    <!-- Critical CSS (Inline for instant render) -->
+    <style>
+      :root {
+        --bg-color: #09090b;       /* Zinc 950 */
+        --card-bg: #18181b;        /* Zinc 900 */
+        --border-color: #27272a;   /* Zinc 800 */
+        --text-main: #e4e4e7;      /* Zinc 200 */
+        --text-muted: #a1a1aa;     /* Zinc 400 */
+        --accent: #3b82f6;         /* Blue 500 */
+        --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font-family: var(--font-family);
+        background-color: var(--bg-color);
+        color: var(--text-main);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        /* Subtle mesh gradient background */
+        background-image: 
+          radial-gradient(circle at 50% 0%, #1c1c22 0%, transparent 70%),
+          radial-gradient(circle at 50% 100%, #121216 0%, transparent 70%);
+      }
+
+      /* Splash Screen Container */
+      .splash-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 40px;
+        max-width: 480px;
+        width: 100%;
+        animation: fadeIn 0.6s ease-out;
+      }
+
+      /* Logo Styling */
+      .logo {
+        width: 72px;
+        height: 72px;
+        margin-bottom: 24px;
+        border-radius: 14px;
+        /* Fallback styling if image missing */
+        background: linear-gradient(135deg, #27272a, #18181b);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 0 1px var(--border-color), 0 8px 20px rgba(0,0,0,0.4);
+      }
+      
+      .logo img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        border-radius: 14px;
+      }
+
+      /* Typography */
+      h1 {
+        margin: 0 0 12px;
+        font-size: 28px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        background: linear-gradient(to bottom right, #fff, #a1a1aa);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      p {
+        margin: 0 0 32px;
+        color: var(--text-muted);
+        line-height: 1.6;
+        font-size: 15px;
+      }
+
+      /* Loading Spinner */
+      .loader {
+        width: 20px;
+        height: 20px;
+        border: 2px solid var(--border-color);
+        border-top-color: var(--accent);
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        margin-bottom: 24px;
+      }
+
+      /* Links & Footer */
+      .meta-link {
+        color: var(--text-muted);
+        font-size: 13px;
+        text-decoration: none;
+        transition: color 0.2s;
+        border-bottom: 1px dotted transparent;
+      }
+
+      .meta-link:hover {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+      }
+
+      /* Utility */
+      .noscript-warning {
+        padding: 1rem;
+        color: #f87171;
+        background: rgba(127, 29, 29, 0.2);
+        border: 1px solid rgba(127, 29, 29, 0.3);
+        border-radius: 8px;
+        font-size: 14px;
+        margin-bottom: 20px;
+      }
+
+      @keyframes spin { to { transform: rotate(360deg); } }
+      @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- React Root: Content here acts as the 'Splash Screen' until React mounts -->
+    <div id="root">
+      <div class="splash-container">
+        
+        <!-- Logo with fallback placeholder -->
+        <div class="logo">
+          <img src="/kernex.png" alt="Kernex" onerror="this.style.display='none';this.parentElement.innerHTML='<svg width=\'32\' height=\'32\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'white\' stroke-width=\'2\'><path d=\'M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5\'/></svg>'" />
+        </div>
+
+        <h1>Kernex</h1>
+        <p>Loading your personal workspace environment...</p>
+        
+        <div class="loader"></div>
+
+        <div style="font-size: 12px; color: #52525b; font-weight: 500;">
+          <span style="opacity: 0.7;">POWERED BY</span> <span style="color: #e4e4e7;">KERNEX OS</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- NoScript Fallback -->
+    <noscript>
+      <div style="display: flex; justify-content: center; padding-top: 20px;">
+        <div class="noscript-warning">
+          <strong>JavaScript Required</strong><br/>
+          Kernex requires JavaScript to function. Please enable it to continue.
+        </div>
+      </div>
+    </noscript>
+
+    <!-- Vite Entry Point -->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

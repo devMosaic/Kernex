@@ -1,24 +1,15 @@
-# Kernex Architecture Guide
+# Architecture Overview
 
-## High-Level Overview
+This document explains the internal design of Kernex for contributors and curious developers.
 
-Kernex is a **self-hosted personal workspace** designed to run on a local server (or VPS) and be accessed via a web browser. It follows a "thick client" approach where the UI is a rich React application, but all state is persisted to the server.
+## Tech Stack
 
-### Core Components
-
-1.  **The Core (Server)**
-    *   **Runtime:** Node.js (v20+).
-    *   **Framework:** Fastify (lightweight, high-performance).
-    *   **Database:** `better-sqlite3` (SQLite) for storing layout, secrets, and system state.
-    *   **Filesystem:** Direct access to the host filesystem for the File Manager.
-    *   **API:** REST-like JSON endpoints.
-
-2.  **The Surface (Client)**
-    *   **Framework:** React 19.
-    *   **Build Tool:** Vite.
-    *   **Language:** TypeScript.
-    *   **State:** Mostly local component state or React Context (`AuthContext`, `SettingsContext`).
-    *   **UI Paradigm:** Infinite Canvas (Zoomable User Interface).
+| Component | Technology | Reason |
+| :--- | :--- | :--- |
+| **Backend** | Fastify | Faster than Express, better schema validation. |
+| **Database** | SQLite (`better-sqlite3`) | Synchronous, embedded, zero-latency queries. |
+| **Frontend** | React 18 | Component-based UI. |
+| **Build** | Vite | Instant HMR, fast builds. |
 
 ---
 
@@ -26,46 +17,36 @@ Kernex is a **self-hosted personal workspace** designed to run on a local server
 
 ```
 /
-├── .idx/              # Project IDX configuration (dev environment)
-├── data/              # Runtime data (SQLite db, JSON state) - GITIGNORED
-├── docs/              # Developer documentation
-├── public/            # Static assets
-├── server/            # Backend Node.js application
-│   ├── api/           # API Route handlers
-│   ├── db.ts          # Database connection
-│   └── server.ts      # Entry point
-├── src/               # Frontend React application
-│   ├── app/           # App-wide providers and routing
-│   ├── canvas/        # The core Canvas UI logic
-│   ├── components/    # Reusable UI components
-│   ├── plugins/       # Plugin implementations (iframe apps)
-│   └── pages/         # Standard full-screen pages (Settings, etc.)
-└── vite.config.ts     # Build configuration (critical for plugins)
+├── server/
+│   ├── server.ts         # Entry point
+│   ├── db.ts             # Database connection & schema
+│   ├── iframeRoutes.ts   # Plugin static serving
+│   └── api/              # REST Endpoints
+│       ├── auth.ts
+│       ├── system.ts
+│       └── ...
+├── src/
+│   ├── app/              # React Contexts (Auth, Settings)
+│   ├── canvas/           # The Node system logic
+│   ├── components/       # UI Library
+│   └── plugins/          # Built-in React plugins
+└── workspace/            # User data storage
 ```
 
 ---
 
-## The Plugin System
+## Core Concepts
 
-Kernex uses an **Iframe-based Plugin Architecture** for strong isolation and stability.
+### 1. The "Dual-Mode" Plugin System
+Kernex supports two types of "Apps":
+1.  **React Components:** Tightly integrated, fast, share memory with the main app. (e.g., Settings Page).
+2.  **Iframe Plugins:** Isolated, secure, can be written in any stack. (e.g., Terminal, 3rd party tools).
 
-*   **Isolation:** Each plugin runs in its own `<iframe>`. If a plugin crashes, the main workspace remains stable.
-*   **Performance:** Plugins are built as separate "Multi-Page App" (MPA) entries by Vite. They are only loaded when requested.
-*   **Security:** Plugins run in a sandboxed environment (same-origin, but separate DOM).
+### 2. The File System Abstraction
+The backend exposes `server/api/files.ts` which acts as a restricted gateway to the OS file system.
+*   It ensures operations are confined to `workspace/`.
+*   It handles path sanitization to prevent directory traversal (`../../`).
 
-See [Plugin Development Guide](./PLUGINS.md) for details on creating tools.
-
----
-
-## Data Persistence
-
-*   **System State:** Stored in `data/system.db` (SQLite).
-*   **Canvas Layout:** Stored in `data/canvas.json`.
-*   **Files:** Real files are modified directly on the disk.
-
-## Security Model
-
-*   **Single Tenant:** Kernex is designed for ONE owner.
-*   **Authentication:** Password-based (hashed with bcrypt).
-*   **Sessions:** Server-side HTTP-only cookies.
-*   **Secrets:** Encrypted (at rest logic to be implemented) or stored securely in SQLite for runtime injection.
+### 3. Real-time Communication
+*   **WebSockets:** Used by the Terminal (`/api/term/ws`) and Logs Viewer (`/api/logs/ws`).
+*   **Polling:** Used by the Canvas to auto-save every 60s.

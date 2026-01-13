@@ -1,8 +1,8 @@
-import { FastifyInstance } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import process from 'process';
 
 export default async function (fastify: FastifyInstance) {
-  fastify.get('/', async (request, reply) => {
+  fastify.get('/', async (_request, _reply) => {
     // Real process info
     const memory = process.memoryUsage();
     const cpuUsage = process.cpuUsage();

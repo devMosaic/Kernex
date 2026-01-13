@@ -1,113 +1,96 @@
-# Kernex Plugin Development Guide
+# Plugin System
 
-Kernex is designed to be extensible. Plugins are essentially **mini React applications** that run inside the workspace.
+Kernex features a powerful, language-agnostic plugin architecture based on web standards.
 
-## How Plugins Work
+## 1. Architecture
 
-Currently, plugins are **internal**, meaning they live inside the `src/plugins/` directory and are bundled with the application.
+Plugins are essentially **Micro-Frontends**.
+*   **Format:** Standard HTML/CSS/JS.
+*   **Isolation:** Each plugin runs in an `<iframe>` within a Canvas Node.
+*   **Communication:** Plugins talk to the main Kernex API using the user's session token.
 
-Each plugin consists of:
-1.  A directory in `src/plugins/<plugin-name>`.
-2.  An `index.html` entry point.
-3.  A `main.tsx` React entry point.
-4.  Registration in `vite.config.ts` (for build).
-5.  Registration in `PluginDrawer.tsx` (for UI).
+### Directory Structure
+Plugins live in `server/plugins/` (built-in) or `dist/plugins/` (production).
+
+```
+server/plugins/
+└── my-tool/
+    ├── index.html    # Entry point
+    ├── main.js       # Logic
+    └── style.css     # Styles
+```
 
 ---
 
-## Step-by-Step: Creating a "Hello World" Plugin
+## 2. Developing a Plugin
 
-### 1. Create the Plugin Files
+### Step 1: Create the structure
+Create a folder `server/plugins/hello-world/` and add an `index.html`.
 
-Create a folder: `src/plugins/helloworld/`
+### Step 2: The Boilerplate
+Your plugin needs to know *who* it is and *where* it is running.
 
-**`src/plugins/helloworld/index.html`**
 ```html
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hello World</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="./main.tsx"></script>
-  </body>
-</html>
+<!-- index.html -->
+<script>
+  // Parse Query Params for Context
+  const params = new URLSearchParams(window.location.search);
+  const TOKEN = params.get('token');         // Auth Token
+  const WORKSPACE_ID = params.get('workspaceId'); // Current Workspace ID
+
+  // Helper for API calls
+  async function apiCall(endpoint) {
+    const res = await fetch(`/api/${endpoint}`, {
+      headers: { 
+        'x-auth-session': TOKEN,
+        'x-workspace-id': WORKSPACE_ID 
+      }
+    });
+    return res.json();
+  }
+</script>
 ```
 
-**`src/plugins/helloworld/main.tsx`**
-```tsx
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import '../../styles/theme.css'   // Inherit global variables
-import '../../styles/global.css'  // Inherit reset/base styles
-
-const HelloWorld = () => {
-  return (
-    <div style={{ padding: '20px', color: 'var(--text-primary)' }}>
-      <h1>Hello World!</h1>
-      <p>This is my first Kernex plugin.</p>
-    </div>
-  )
-}
-
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <HelloWorld />
-  </React.StrictMode>,
-)
-```
-
-### 2. Register the Build Entry
-
-Open `vite.config.ts` in the root directory. Add your plugin to the `input` object:
-
-```typescript
-// vite.config.ts
-export default defineConfig({
-  build: {
-    rollupOptions: {
-      input: {
-        // ... existing plugins
-        'helloworld': resolve(__dirname, 'src/plugins/helloworld/index.html'),
-      },
-    },
-  },
-  // ...
-})
-```
-
-### 3. Register in the UI
-
-Open `src/components/drawer/PluginDrawer.tsx`. Add your plugin to the `PLUGINS` array:
-
-```tsx
-const PLUGINS: Plugin[] = [
-  // ... existing plugins
-  {
-    id: 'hello-world',
-    title: 'Hello World',
-    description: 'My first example plugin',
-    icon: <Zap size={24} />, // Import an icon from 'lucide-react'
-    type: 'iframe',
-    iframeSrc: '/i/helloworld/index.html', // Note the /i/ prefix which maps to plugins
-    category: 'Examples'
-  },
-];
-```
-
-### 4. Test It
-
-1.  Restart the dev server (`npm run dev`) to pick up the `vite.config.ts` changes.
-2.  Open the Plugin Drawer (Sidebar -> Plugins).
-3.  Find "Hello World" and drag it onto the canvas.
+### Step 3: Integration
+1.  Restart the server (to detect the new folder, though hot-reload might work).
+2.  Open the **Plugin Drawer** in a workspace.
+3.  Your plugin should appear (or add it manually via the "Add Custom" button).
 
 ---
 
-## Best Practices
+## 3. Inter-Plugin Communication
+Plugins can listen for global events via `window.postMessage`.
 
-*   **Styling:** Import `theme.css` to ensure your plugin respects the user's theme (Dark/Light mode). Use CSS variables like `var(--bg-primary)` and `var(--text-primary)`.
-*   **State:** Keep your plugin state local. If you need to save data, currently you must implement a custom API endpoint or use `localStorage` (which is isolated to the iframe origin).
-*   **Dependencies:** You can import any npm package installed in the project `package.json`.
+**Example: Listening for Theme Changes**
+```javascript
+window.addEventListener('message', (event) => {
+  if (event.data.type === 'THEME_CHANGE') {
+    document.body.setAttribute('data-theme', event.data.themeId);
+  }
+});
+```
+
+---
+
+## 4. Built-in Plugins
+
+### Terminal
+A wrapper around `xterm.js` connected to a WebSocket (`/api/term/ws`).
+*   **Features:** Full PTY support, resizing, copy/paste.
+
+### File Manager
+A React-based file explorer mimicking modern IDE experiences.
+*   **UI:** Dark-themed, recursive tree view with file icons.
+*   **Actions:** Inline creation/renaming, drag-and-drop moves, context menus.
+*   **Uploads:** Drag files from OS to specific folders.
+*   **Editor:** Monaco Editor integration for robust file editing.
+
+### Photo Viewer
+A simple, focused tool for viewing images from the workspace.
+*   **Integration:** Automatically opens when dropping images on the canvas.
+*   **API:** Uses `/api/files/raw` for secure image streaming.
+
+### Developer Tools
+*   **Base64 Converter:** Encode/Decode strings.
+*   **JWT Debugger:** Parse tokens.
+*   **HTTP Client:** Send REST requests.

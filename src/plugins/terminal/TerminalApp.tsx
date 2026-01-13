@@ -3,7 +3,7 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import './TerminalApp.css';
-import { getSessionToken } from '../authHelper';
+import { getSessionToken, getWorkspaceId } from '../authHelper';
 
 const TerminalApp: React.FC = () => {
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -57,7 +57,8 @@ const TerminalApp: React.FC = () => {
       setStatus('connected');
       socket.send(JSON.stringify({
         type: 'init',
-        sessionId: localStorage.getItem('terminal_sessionId') || undefined
+        sessionId: localStorage.getItem('terminal_sessionId') || undefined,
+        workspaceId: getWorkspaceId()
       }));
     };
 

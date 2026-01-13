@@ -1,11 +1,11 @@
-import { FastifyInstance } from 'fastify';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import type { FastifyInstance } from 'fastify';
 import os from 'os';
 import si from 'systeminformation';
 import fs from 'fs';
 import path from 'path';
 
 // Cache for heavy metrics
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let metricsCache: any = null;
 let lastMetricsFetch = 0;
 const CACHE_TTL = 2000; // 2 seconds
@@ -19,9 +19,20 @@ const UPDATE_CACHE_TTL = 1000 * 60 * 20; // 20 minutes
 async function safeSi<T>(promise: Promise<T>, defaultValue: T): Promise<T> {
   try {
     return await promise;
-  } catch (e) {
-    console.error('SystemInformation call failed:', e);
+  } catch (e) { // eslint-disable-line @typescript-eslint/no-unused-vars
+    console.error('SystemInformation call failed');
     return defaultValue;
+  }
+}
+
+class UpdateCheckError extends Error {
+  public cause: unknown;
+  public isRetryable: boolean;
+  
+  constructor(message: string, cause: unknown, isRetryable: boolean) {
+    super(message);
+    this.cause = cause;
+    this.isRetryable = isRetryable;
   }
 }
 
@@ -69,7 +80,7 @@ function parseChangelog(yaml: string, currentVersion: string, latestVersion: str
 export default async function (fastify: FastifyInstance) {
   
   // GET /api/system/update-check
-  fastify.get('/update-check', async (request, reply) => {
+  fastify.get('/update-check', async () => {
     const now = Date.now();
     if (updateCache && (now - lastUpdateCheck < UPDATE_CACHE_TTL)) {
         return updateCache;
@@ -98,10 +109,11 @@ export default async function (fastify: FastifyInstance) {
         try {
             releaseData = await releaseRes.json();
         } catch (e) {
-            throw new Error('Failed to parse release JSON');
+            const isRetryable = e instanceof SyntaxError;
+            throw new UpdateCheckError('Failed to parse release JSON', e, isRetryable);
         }
 
-        const latestVersion = releaseData.version;
+        const latestVersion = (releaseData as any).version;
         const updateAvailable = latestVersion !== currentVersion;
 
         let changelog: { added: string[]; fixed: string[]; breaking: string[]; } = { added: [], fixed: [], breaking: [] };
@@ -117,16 +129,21 @@ export default async function (fastify: FastifyInstance) {
             currentVersion,
             latestVersion,
             updateAvailable,
-            breaking: releaseData.breaking || false,
-            releasedAt: releaseData.releasedAt || new Date().toISOString().split('T')[0],
+            breaking: (releaseData as any).breaking || false,
+            releasedAt: (releaseData as any).releasedAt || new Date().toISOString().split('T')[0],
             changelog
         };
 
         updateCache = result;
         lastUpdateCheck = now;
         return result;
-    } catch (error) {
-        console.error('Update check failed:', error);
+    } catch (error: any) {
+        if (error instanceof UpdateCheckError) {
+             console.error(`Update check failed (Retryable: ${error.isRetryable}):`, error.message);
+        } else {
+             console.error('Update check critical failure:', error);
+        }
+        
         // Fail silently or return basic info
         const pkgPath = path.join(process.cwd(), 'package.json');
         const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
@@ -138,7 +155,7 @@ export default async function (fastify: FastifyInstance) {
   });
 
   // GET /api/system/info - Static system information
-  fastify.get('/info', async (request, reply) => {
+  fastify.get('/info', async (_request, reply) => {
     try {
       const [
         cpu,
@@ -226,7 +243,7 @@ export default async function (fastify: FastifyInstance) {
   });
 
   // GET /api/system/metrics - Real-time system metrics
-  fastify.get('/metrics', async (request, reply) => {
+  fastify.get('/metrics', async (_request, reply) => {
     const now = Date.now();
     if (metricsCache && (now - lastMetricsFetch < CACHE_TTL)) {
       return metricsCache;

@@ -1,5 +1,4 @@
 import fs from 'fs/promises';
-import path from 'path';
 
 export const atomicWriteFile = async (filePath: string, content: string) => {
   const tempFile = `${filePath}.${Date.now()}.${Math.random().toString(36).substring(2)}.tmp`;

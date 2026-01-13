@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import db from '../db.js';
 
 export default async function (fastify: FastifyInstance) {
@@ -28,7 +28,7 @@ export default async function (fastify: FastifyInstance) {
   });
 
   // Management APIs
-  fastify.get('/api/short-urls', async (request, reply) => {
+  fastify.get('/api/short-urls', async (_request, reply) => {
     try {
       const urls = db.prepare('SELECT * FROM short_urls ORDER BY updated_at DESC').all();
       return urls;

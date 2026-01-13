@@ -1,8 +1,8 @@
-import { FastifyInstance } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 
 export default async function (fastify: FastifyInstance) {
   fastify.post('/execute', async (request, reply) => {
-    const { method, url, headers, body, settings } = request.body as any;
+    const { method, url, headers, body } = request.body as any;
 
     try {
       // Basic validation

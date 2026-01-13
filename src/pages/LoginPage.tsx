@@ -116,6 +116,8 @@ const LoginPage: React.FC = () => {
             </div>
             <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
               For security, please set a new password in the environment variable <code>KERNEX_ROOT_OVERRIDE</code> on your host machine to override the current database credentials.
+              <br/><br/>
+              See <a href="/docs?file=DEPLOYMENT.md" style={{ color: 'var(--accent-primary)' }}>Deployment Docs</a> for details.
             </p>
           </div>
         )}

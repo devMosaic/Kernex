@@ -1,11 +1,11 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import DataApp from '../data/DataApp'
+import LogsApp from './LogsApp'
 import '../../styles/theme.css'
 import '../../styles/global.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <DataApp tool="logs-viewer" />
+    <LogsApp />
   </React.StrictMode>,
 )

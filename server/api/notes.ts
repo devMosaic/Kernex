@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import db from '../db.js';
 import { v4 as uuidv4 } from 'uuid';
 

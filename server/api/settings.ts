@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import { getSetting, setSetting } from '../db.js';
 
 const DEFAULT_SETTINGS = {
@@ -42,7 +42,7 @@ const DEFAULT_SETTINGS = {
 };
 
 export default async function (fastify: FastifyInstance) {
-  fastify.get('/', async (request, reply) => {
+  fastify.get('/', async (_request, _reply) => {
     // Load all settings
     // In a real app with many settings, we might want to load them selectively or cache them.
     // For now, we iterate keys of DEFAULT_SETTINGS and fetch.
@@ -53,7 +53,7 @@ export default async function (fastify: FastifyInstance) {
     return currentSettings;
   });
 
-  fastify.post('/update', async (request, reply) => {
+  fastify.post('/update', async (request, _reply) => {
     const updates = request.body as Record<string, any>;
     for (const [key, value] of Object.entries(updates)) {
       setSetting(key, value);

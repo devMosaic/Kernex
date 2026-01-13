@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, Plus, Trash2, Copy, Check, ExternalLink, Power, PowerOff } from 'lucide-react';
 import './ShortUrlsApp.css';
 import { pluginFetch } from '../authHelper';
+import { useToast } from '../../app/ToastContext';
 
 interface ShortUrl {
   id: string;
@@ -14,6 +15,7 @@ interface ShortUrl {
 
 const ShortUrlsApp: React.FC = () => {
   console.log('Rendering ShortUrlsApp component');
+  const { error: showError } = useToast();
   const [urls, setUrls] = useState<ShortUrl[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +70,7 @@ const ShortUrlsApp: React.FC = () => {
       setNewTarget('');
       setIsAdding(false);
     } catch (e: any) {
-      alert(e.message);
+      showError(e.message);
     }
   };
 
@@ -80,7 +82,7 @@ const ShortUrlsApp: React.FC = () => {
       });
       setUrls(urls.filter(u => u.id !== id));
     } catch (e) {
-      alert('Failed to delete');
+      showError('Failed to delete');
     }
   };
 
@@ -94,7 +96,7 @@ const ShortUrlsApp: React.FC = () => {
       });
       setUrls(urls.map(u => u.id === url.id ? { ...u, enabled } : u));
     } catch (e) {
-      alert('Failed to update');
+      showError('Failed to update');
     }
   };
 
@@ -113,7 +115,7 @@ const ShortUrlsApp: React.FC = () => {
       setUrls(urls.map(u => u.id === id ? { ...u, target: editTarget, updated_at: Date.now() } : u));
       setEditingId(null);
     } catch (e) {
-      alert('Failed to update');
+      showError('Failed to update');
     }
   };
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Search, X, Globe, FileText, Database, Terminal, Link as LinkIcon, 
   Hash, Zap, Lock, Key, Shield, FileCode, FileJson, Table, Diff, 
-  FileType, List, Layers, ChevronDown, ChevronRight
+  FileType, List, Layers, ChevronDown, ChevronRight, Server
 } from 'lucide-react';
 import './PluginDrawer.css';
 
@@ -48,6 +48,24 @@ const PLUGINS: Plugin[] = [
     icon: <Terminal size={24} />,
     type: 'iframe',
     iframeSrc: '/i/terminal/index.html',
+    category: 'System & Environment'
+  },
+  {
+    id: 'ftp-client',
+    title: 'FTP Client',
+    description: 'Connect to external FTP servers',
+    icon: <Server size={24} />,
+    type: 'iframe',
+    iframeSrc: '/i/ftp-client/index.html',
+    category: 'System & Environment'
+  },
+  {
+    id: 'ftp-info',
+    title: 'FTP Info',
+    description: 'Connection details for internal FTP',
+    icon: <Server size={24} color="#10b981" />,
+    type: 'iframe',
+    iframeSrc: '/i/ftp-usage/index.html',
     category: 'System & Environment'
   },
   {
@@ -251,7 +269,9 @@ const PluginDrawer: React.FC<PluginDrawerProps> = ({ isOpen, onClose, onAddPlugi
   useEffect(() => {
     if (searchTerm) {
        const allCats = Object.keys(groupedPlugins);
-       setExpandedCategories(new Set(allCats));
+       setTimeout(() => {
+         setExpandedCategories(new Set(allCats));
+       }, 0);
     }
   }, [searchTerm, groupedPlugins]);
 

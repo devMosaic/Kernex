@@ -25,7 +25,7 @@ interface SettingsContextType {
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  themeId: 'midnight-carbon',
+  themeId: 'neon-purple',
   fontSize: 14,
   uiDensity: 'normal',
   canvasGrid: true,

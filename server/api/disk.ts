@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import fs from 'fs/promises';
 import path from 'path';
 
@@ -32,7 +32,7 @@ async function getDiskUsage(dir: string): Promise<{ fileCount: number; folderCou
 }
 
 export default async function (fastify: FastifyInstance) {
-  fastify.get('/overview', async (request, reply) => {
+  fastify.get('/overview', async (_request, reply) => {
     try {
       // 1. Partition Stats (Node 18+)
       // Note: fs.statfs might not be available on all platforms/node versions in some environments, 
@@ -41,7 +41,6 @@ export default async function (fastify: FastifyInstance) {
       let total = 0, free = 0, used = 0;
       
       try {
-        // @ts-ignore - statfs types might be missing in older @types/node
         const stats = await fs.statfs(ROOT_DIR); 
         // bsize = block size, blocks = total blocks, bfree = free blocks, bavail = available to user
         total = stats.blocks * stats.bsize;

@@ -3,6 +3,7 @@ import { routes } from './routes';
 import '../styles/global.css';
 import { SettingsProvider } from './SettingsContext';
 import { AuthProvider } from './AuthContext';
+import { ToastProvider } from './ToastContext';
 
 function AppContent() {
   const content = useRoutes(routes);
@@ -14,7 +15,9 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <SettingsProvider>
-          <AppContent />
+          <ToastProvider>
+            <AppContent />
+          </ToastProvider>
         </SettingsProvider>
       </AuthProvider>
     </BrowserRouter>

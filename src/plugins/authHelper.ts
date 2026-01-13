@@ -25,18 +25,28 @@ export const getSessionToken = () => {
   return null;
 };
 
+export const getWorkspaceId = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('workspaceId');
+};
+
 export const pluginFetch = async (url: string, options: RequestInit = {}) => {
   const token = getSessionToken();
+  const workspaceId = getWorkspaceId();
   
-  // Append token to URL if not present (for backend authenticate hook support)
+  // Append token and workspaceId to URL
   let finalUrl = url;
-  if (token) {
-    const urlObj = new URL(url, window.location.origin);
-    if (!urlObj.searchParams.has('token')) {
-      urlObj.searchParams.append('token', token);
-    }
-    finalUrl = urlObj.pathname + urlObj.search;
+  const urlObj = new URL(url, window.location.origin);
+  
+  if (token && !urlObj.searchParams.has('token')) {
+    urlObj.searchParams.append('token', token);
   }
+  
+  if (workspaceId && !urlObj.searchParams.has('workspaceId')) {
+      urlObj.searchParams.append('workspaceId', workspaceId);
+  }
+
+  finalUrl = urlObj.pathname + urlObj.search;
 
   const headers: Record<string, string> = {
     ...((options.headers as any) || {}),
@@ -44,6 +54,10 @@ export const pluginFetch = async (url: string, options: RequestInit = {}) => {
 
   if (token) {
     headers['x-auth-session'] = token;
+  }
+  
+  if (workspaceId) {
+      headers['x-workspace-id'] = workspaceId;
   }
 
   const finalOptions: RequestInit = {
