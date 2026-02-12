@@ -3,38 +3,38 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install dependencies
-COPY package*.json ./
-RUN npm ci
+# Copy only dependency files first (for caching)
+COPY package.json package-lock.json* ./
 
-# Copy source
+# Install all deps needed for build
+RUN npm install
+
+# Copy remaining source
 COPY . .
 
 # Build frontend (Vite)
 RUN npm run build
 
+
 # Stage 2: Production Runtime
 FROM node:20-alpine AS runner
 
 WORKDIR /app
-
 ENV NODE_ENV=production
 
-# Install production dependencies
-COPY package*.json ./
-RUN npm ci --omit=dev
+# Copy dependency files
+COPY package.json package-lock.json* ./
 
-# Copy built frontend assets
+# Install only production deps
+RUN npm install --omit=dev && npm cache clean --force
+
+# Copy built assets and server
 COPY --from=builder /app/dist ./dist
-
-# Copy server code
 COPY --from=builder /app/server ./server
 
-# Ensure data directory exists
+# Create data directory
 RUN mkdir -p data
 
-# Expose the application port
 EXPOSE 3000
 
-# Start the server
 CMD ["npm", "run", "server"]
